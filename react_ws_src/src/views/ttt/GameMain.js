@@ -7,6 +7,7 @@ import TweenMax from 'gsap'
 import rand_arr_elem from '../../helpers/rand_arr_elem'
 import rand_to_fro from '../../helpers/rand_to_fro'
 import AvailablePlayersList from './AvailablePlayersList'
+import ModalDialog from './ModalDialog'
 
 export default class SetName extends Component {
 
@@ -33,7 +34,8 @@ export default class SetName extends Component {
 				next_turn_ply: true,
 				game_play: true,
 				game_stat: 'Start game',
-				set_game_player: null				
+				set_game_player: null,
+				game_request: null				
 			}
 		else {
 			this.sock_start()
@@ -44,9 +46,15 @@ export default class SetName extends Component {
 				game_play: false,
 				game_stat: 'Connecting',
 				available_players: [],
-				game_player_choice: this.props.set_game_player
+				game_player_choice: this.props.set_game_player,
+				game_request: null 
 			}
 		}
+
+		this.sendGameRequest = this.sendGameRequest.bind(this);
+    this.acceptRequest = this.acceptRequest.bind(this);
+    this.rejectRequest = this.rejectRequest.bind(this);
+
 	}
 
 //	------------------------	------------------------	------------------------
@@ -81,14 +89,13 @@ export default class SetName extends Component {
 			}.bind(this));
 	
 			this.socket.on('game_request', function({from, from_player_name}) {
-				const accept = window.confirm(`Player ${from_player_name} wants to play. Accept?`);
-				if (accept) {
-						this.socket.emit("accept_request", { from, to: this.socket.id });
-				} else {
-						this.socket.emit("reject_request", { from: fromPlayer.sockid });
-				}
+				this.setState(
+					{ game_request: { from, from_player_name } }
+				);
+				console.log('Received game_request:', from, from_player_name);
 			}.bind(this));
 		}
+
 
 
 
@@ -107,16 +114,47 @@ export default class SetName extends Component {
 
 		this.socket.on('opp_turn', this.turn_opp_live.bind(this));
 
-
-
 	}
+
+	acceptRequest() {
+    const { game_request } = this.state;
+    // Emit accept_request to the server with relevant data
+    if (game_request) {
+			this.setState(
+				{ game_request: null }
+			);
+
+      this.socket.emit("accept_request", { from: game_request.from, to: this.socket.id });
+      console.log('Request accepted');
+    }
+  }
+
+  rejectRequest() {
+    const { game_request } = this.state;
+    // Emit reject_request to the server with relevant data
+    if (game_request) {
+			this.setState(
+				{ game_request: null }
+			);
+			
+      this.socket.emit("reject_request", { from: game_request.from});
+      console.log('Request rejected');
+
+    }
+  }
 
 //	------------------------	------------------------	------------------------
 //	------------------------	------------------------	------------------------
 
 	componentWillUnmount () {
 
-		this.socket && this.socket.disconnect();
+		if (this.socket) {
+			this.socket.off('available_players');
+			this.socket.off('game_request');
+			this.socket.off('pair_players');
+			this.socket.off('opp_turn');
+			this.socket.disconnect();
+	}
 	}
 
 //	------------------------	------------------------	------------------------
@@ -140,6 +178,16 @@ export default class SetName extends Component {
 			return (
 				<div id='GameMain'>
 					<AvailablePlayersList available_players={this.state.available_players} sendGameRequest={this.sendGameRequest.bind(this)} />
+					{/* Show PopUp when gameRequest exists */}
+					{this.state.game_request && (
+          <ModalDialog
+						handleShowPopup={this.handleShowPopup}
+						isVisible={true}
+						from_player_name={this.state.game_request.from_player_name}
+						onAccept={this.acceptRequest}
+						onReject={this.rejectRequest}
+          />
+        )}
 				</div>
 			)
 		} else
