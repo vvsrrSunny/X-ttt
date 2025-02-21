@@ -87,7 +87,7 @@ export default class Ttt extends Component {
 
 	gameEnd (t) {
 		this.state.game_type = null
-
+		this.state.set_game_player = null
 		this.upd_game_step()
 	}
 
