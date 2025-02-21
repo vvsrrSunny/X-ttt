@@ -11,6 +11,7 @@ util = require("util");							// Utility resources (logging, object inspection, 
 **************************************************/
 Player = require("./Player").Player;			// Player class
 players = [];									// Array of connected players
+players_to_play_random = [];
 players_avail = [];
 
 

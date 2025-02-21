@@ -17,7 +17,14 @@ function onNewPlayer(data) {
 
 	// Add new player to the players array
 	players.push(newPlayer);
-	players_avail.push(newPlayer);
+	
+	if (data.player_game_type === "my_choice") {
+		players_avail.push(newPlayer);
+		emitAvailablePlayers();
+	} else {
+		players_to_play_random.push(newPlayer);
+		pair_rand_players();
+	}
 
 	// util.log("looking for pair - uid:"+newPlayer.uid + " ("+newPlayer.name + ")");
 
@@ -43,35 +50,35 @@ function emitAvailablePlayers() {
 };
 // ----	--------------------------------------------	--------------------------------------------	
 
-// function pair_avail_players() {
+function pair_rand_players() {
 
-// 	if (players_avail.length < 2)
-// 		return;
+	if (players_to_play_random.length < 2)
+		return;
 
 
-// 	var p1 = players_avail.shift();
-// 	var p2 = players_avail.shift();
+	var p1 = players_to_play_random.shift();
+	var p2 = players_to_play_random.shift();
 
-// 	p1.mode = 'm';
-// 	p2.mode = 's';
-// 	p1.status = 'paired';
-// 	p2.status = 'paired';
-// 	p1.opp = p2;
-// 	p2.opp = p1;
+	p1.mode = 'm';
+	p2.mode = 's';
+	p1.status = 'paired';
+	p2.status = 'paired';
+	p1.opp = p2;
+	p2.opp = p1;
 
-// 	//util.log("connect_new_players p1: "+util.inspect(p1, { showHidden: true, depth: 3, colors: true }));
+	//util.log("connect_new_players p1: "+util.inspect(p1, { showHidden: true, depth: 3, colors: true }));
 
-// 	// io.sockets.connected[p1.sockid].emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
-// 	// io.sockets.connected[p2.sockid].emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
-// 	console.log("p1.sockid: "+p1.sockid);
-// 	console.log("p2.sockid: "+p2.sockid);
-// 	io.to(p1.sockid).emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
-// 	io.to(p2.sockid).emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
+	// io.sockets.connected[p1.sockid].emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
+	// io.sockets.connected[p2.sockid].emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
+	console.log("p1.sockid: "+p1.sockid);
+	console.log("p2.sockid: "+p2.sockid);
+	io.to(p1.sockid).emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
+	io.to(p2.sockid).emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
 
-// 	util.log("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
-// 	// updAdmin("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
+	util.log("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
+	// updAdmin("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
 
-// };
+};
 
 // ----	--------------------------------------------	--------------------------------------------	
 

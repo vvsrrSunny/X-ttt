@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import SetName from './SetName'
 import SetGameType from './SetGameType'
+import SetChoosePlayerOption from './SetChoosePlayerOption'
 
 import GameMain from './GameMain'
 
@@ -12,7 +13,9 @@ export default class Ttt extends Component {
 		super(props)
 
 		this.state = {
-			game_step: this.set_game_step()
+			game_step: this.set_game_step(),
+			game_type: null,
+			set_game_player: null
 		}
 	}
 
@@ -20,9 +23,9 @@ export default class Ttt extends Component {
 
 	render () {
 
-		const {game_step} = this.state
+		const {game_step, game_type} = this.state
 
-		console.log(game_step)
+		console.log(game_step);
 
 		return (
 			<section id='TTT_game'>
@@ -40,8 +43,14 @@ export default class Ttt extends Component {
 					{game_step == 'set_game_type' && <SetGameType 
 														onSetType={this.saveGameType.bind(this)} 
 													/>}
+
+					{game_step == 'set_choose_player_option' && <SetChoosePlayerOption
+														onSetType={this.saveChoosePlayerOption.bind(this)} 
+													/>}
+
 					{game_step == 'start_game' && <GameMain 
 														game_type={this.state.game_type}
+														set_game_player={this.state.set_game_player}
 														onEndGame={this.gameEnd.bind(this)} 
 													/>}
 
@@ -63,6 +72,13 @@ export default class Ttt extends Component {
 
 	saveGameType (t) {
 		this.state.game_type = t
+
+		this.upd_game_step()
+	}
+//	------------------------	------------------------	------------------------
+
+	saveChoosePlayerOption (t) {
+		this.state.set_game_player = t
 
 		this.upd_game_step()
 	}
@@ -93,7 +109,9 @@ export default class Ttt extends Component {
 			return 'set_name'
 		else if (!this.state.game_type)
 			return 'set_game_type'
-		else
+		else if (!this.state.set_game_player && this.state.game_type == 'live')
+			return 'set_choose_player_option'	
+			else
 			return 'start_game'
 	}
 

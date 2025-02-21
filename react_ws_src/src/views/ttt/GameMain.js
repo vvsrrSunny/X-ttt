@@ -6,6 +6,7 @@ import TweenMax from 'gsap'
 
 import rand_arr_elem from '../../helpers/rand_arr_elem'
 import rand_to_fro from '../../helpers/rand_to_fro'
+import AvailablePlayersList from './AvailablePlayersList'
 
 export default class SetName extends Component {
 
@@ -31,8 +32,8 @@ export default class SetName extends Component {
 				cell_vals: {},
 				next_turn_ply: true,
 				game_play: true,
-				game_stat: 'Start game'
-				
+				game_stat: 'Start game',
+				set_game_player: null				
 			}
 		else {
 			this.sock_start()
@@ -42,7 +43,8 @@ export default class SetName extends Component {
 				next_turn_ply: true,
 				game_play: false,
 				game_stat: 'Connecting',
-				available_players: []
+				available_players: [],
+				game_player_choice: this.props.set_game_player
 			}
 		}
 	}
@@ -65,26 +67,29 @@ export default class SetName extends Component {
 		this.socket.on('connect', function(data) { 
 			console.log('socket connected', data)
 
-			this.socket.emit('new player', { name: app.settings.curr_user.name });
+			this.socket.emit('new player', { name: app.settings.curr_user.name, player_game_type: this.props.set_game_player });
 
 		}.bind(this));
 
-		this.socket.on('available_players', function(data) { 
-			console.log('available_players', data)
-			const new_available_players= data.filter(player => app.settings.curr_user.name !== player.name);
-			this.setState({
-				available_players: new_available_players
-			})
-		}.bind(this));
+		if(this.props.set_game_player == 'my_choice') {
+			this.socket.on('available_players', function(data) { 
+				console.log('available_players', data)
+				const new_available_players= data.filter(player => app.settings.curr_user.name !== player.name);
+				this.setState({
+					available_players: new_available_players
+				})
+			}.bind(this));
+	
+			this.socket.on('game_request', function({from, from_player_name}) {
+				const accept = window.confirm(`Player ${from_player_name} wants to play. Accept?`);
+				if (accept) {
+						this.socket.emit("accept_request", { from, to: this.socket.id });
+				} else {
+						this.socket.emit("reject_request", { from: fromPlayer.sockid });
+				}
+			}.bind(this));
+		}
 
-		this.socket.on('game_request', function({from, from_player_name}) {
-			const accept = window.confirm(`Player ${from_player_name} wants to play. Accept?`);
-			if (accept) {
-					this.socket.emit("accept_request", { from, to: this.socket.id });
-			} else {
-					this.socket.emit("reject_request", { from: fromPlayer.sockid });
-			}
-		}.bind(this));
 
 
 		this.socket.on('pair_players', function(data) { 
@@ -93,7 +98,8 @@ export default class SetName extends Component {
 			this.setState({
 				next_turn_ply: data.mode=='m',
 				game_play: true,
-				game_stat: 'Playing with ' + data.opp.name
+				game_stat: 'Playing with ' + data.opp.name,
+				game_player_choice: null,
 			})
 
 		}.bind(this));
@@ -130,52 +136,48 @@ export default class SetName extends Component {
 		const { cell_vals } = this.state
 		// console.log(cell_vals)
 
+		if(this.state.game_player_choice == 'my_choice' ) {
+			return (
+				<div id='GameMain'>
+					<AvailablePlayersList available_players={this.state.available_players} sendGameRequest={this.sendGameRequest.bind(this)} />
+				</div>
+			)
+		} else
 		return (
-			<div id='GameMain'>
-
-				<h1>Play {this.props.game_type}</h1>
-
-				<div id="game_stat">
-					<div id="game_stat_msg">{this.state.game_stat}</div>
-					{this.state.game_play && <div id="game_turn_msg">{this.state.next_turn_ply ? 'Your turn' : 'Opponent turn'}</div>}
-				</div>
-
+			<div id='GameMain'> 
 				<div>
-						<h1>Available Players</h1>
-						<ul>
-								{this.state.available_players && this.state.available_players.map((player) => (
-									
-										<li key={player.uid}>
-												{player.name} 
-												<button onClick={() => this.sendGameRequest(player.uid)}>Challenge</button>
-										</li>
-								))}
-						</ul>
-				</div>
-
-				<div id="game_board">
-					<table>
-					<tbody>
-						<tr>
+					<h1>Play {this.props.game_type}</h1>
+		
+					<div id="game_stat">
+						<div id="game_stat_msg">{this.state.game_stat}</div>
+						{this.state.game_play && <div id="game_turn_msg">{this.state.next_turn_ply ? 'Your turn' : 'Opponent turn'}</div>}
+					</div>
+	
+					<div id="game_board">
+						<table>
+						<tbody>
+							<tr>
 							<td id='game_board-c1' ref='c1' onClick={this.click_cell.bind(this)}> {this.cell_cont('c1')} </td>
-							<td id='game_board-c2' ref='c2' onClick={this.click_cell.bind(this)} className="vbrd"> {this.cell_cont('c2')} </td>
-							<td id='game_board-c3' ref='c3' onClick={this.click_cell.bind(this)}> {this.cell_cont('c3')} </td>
-						</tr>
-						<tr>
-							<td id='game_board-c4' ref='c4' onClick={this.click_cell.bind(this)} className="hbrd"> {this.cell_cont('c4')} </td>
-							<td id='game_board-c5' ref='c5' onClick={this.click_cell.bind(this)} className="vbrd hbrd"> {this.cell_cont('c5')} </td>
-							<td id='game_board-c6' ref='c6' onClick={this.click_cell.bind(this)} className="hbrd"> {this.cell_cont('c6')} </td>
-						</tr>
-						<tr>
-							<td id='game_board-c7' ref='c7' onClick={this.click_cell.bind(this)}> {this.cell_cont('c7')} </td>
-							<td id='game_board-c8' ref='c8' onClick={this.click_cell.bind(this)} className="vbrd"> {this.cell_cont('c8')} </td>
-							<td id='game_board-c9' ref='c9' onClick={this.click_cell.bind(this)}> {this.cell_cont('c9')} </td>
-						</tr>
-					</tbody>
-					</table>
-				</div>
+								<td id='game_board-c2' ref='c2' onClick={this.click_cell.bind(this)} className="vbrd"> {this.cell_cont('c2')} </td>
+								<td id='game_board-c3' ref='c3' onClick={this.click_cell.bind(this)}> {this.cell_cont('c3')} </td>
+							</tr>
+							<tr>
+								<td id='game_board-c4' ref='c4' onClick={this.click_cell.bind(this)} className="hbrd"> {this.cell_cont('c4')} </td>
+								<td id='game_board-c5' ref='c5' onClick={this.click_cell.bind(this)} className="vbrd hbrd"> {this.cell_cont('c5')} </td>
+								<td id='game_board-c6' ref='c6' onClick={this.click_cell.bind(this)} className="hbrd"> {this.cell_cont('c6')} </td>
+							</tr>
+							<tr>
+								<td id='game_board-c7' ref='c7' onClick={this.click_cell.bind(this)}> {this.cell_cont('c7')} </td>
+								<td id='game_board-c8' ref='c8' onClick={this.click_cell.bind(this)} className="vbrd"> {this.cell_cont('c8')} </td>
+								<td id='game_board-c9' ref='c9' onClick={this.click_cell.bind(this)}> {this.cell_cont('c9')} </td>
+							</tr>
+						</tbody>
+						</table>
+					</div>
 
-				<button type='submit' onClick={this.end_game.bind(this)} className='button'><span>End Game <span className='fa fa-caret-right'></span></span></button>
+					<button type='submit' onClick={this.end_game.bind(this)} className='button'><span>End Game <span className='fa fa-caret-right'></span></span></button>
+		
+				</div>
 
 			</div>
 		)

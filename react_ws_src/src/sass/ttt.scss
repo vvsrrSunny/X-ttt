@@ -163,4 +163,73 @@ section#TTT_game{
 		}
 	}
 
+	.available-players {
+		max-width: 100%;
+		margin: 0 auto;
+		padding: 10px;
+	
+		// h1 {
+		// 	font-size: 20px;
+		// 	color: #333;
+		// 	text-align: center;
+		// 	margin-bottom: 10px;
+		// }
+	
+		ul {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+	
+			li {
+				display: flex;
+				flex-direction: column; // Stack items on small screens
+				align-items: center;
+				background: #f8f8f8;
+				padding: 12px;
+				margin: 8px 0;
+				border-radius: 8px;
+				transition: background 0.3s ease;
+				box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+				p {
+					font-size: 16px;
+					color: #333;
+					margin-bottom: 8px;
+				}
+				span {
+					font-size: 16px;
+					font-weight: 500;
+					margin-bottom: 8px;
+				}
+	
+				button {
+					background: #002266;
+					color: white;
+					border: none;
+					padding: 12px 14px;
+					border-radius: 5px;
+					cursor: pointer;
+					transition: background 0.3s;
+					width: 100%; // Full width on mobile for better UX
+					max-width: 200px;
+					text-align: center;
+					i {
+						margin-left: 0.5rem; // Add space between text and icon
+					}
+					
+					&:hover {
+						background: #00438b;
+					}
+				}
+			}
+		}
+	
+		@media (min-width: 600px) {
+			ul {
+				li {
+					flex-direction: row; // Side-by-side layout on larger screens
+					justify-content: space-between;
+				}
+			}
+		}
+	}
 }
