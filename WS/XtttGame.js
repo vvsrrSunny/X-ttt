@@ -8,8 +8,9 @@ function onNewPlayer(data) {
 
 	util.log("New player has joined: "+data.name);
 
+	const { v4: uuidv4 } = require('uuid');
 	// Create a new player
-	var newPlayer = new Player(-1, data.name, "looking");
+	var newPlayer = new Player(uuidv4(), data.name, "looking");
 	newPlayer.sockid = this.id;
 
 	this.player = newPlayer;
@@ -20,7 +21,10 @@ function onNewPlayer(data) {
 
 	// util.log("looking for pair - uid:"+newPlayer.uid + " ("+newPlayer.name + ")");
 
-	pair_avail_players();
+	// pair_avail_players();
+
+	  // Emit updated player list
+		emitAvailablePlayers();
 
 	// updAdmin("looking for pair - uid:"+p.uid + " ("+p.name + ")");
 
@@ -29,34 +33,45 @@ function onNewPlayer(data) {
 };
 
 // ----	--------------------------------------------	--------------------------------------------	
+function emitAvailablePlayers() {
+	const availablePlayers = players_avail.map(player => ({
+			uid: player.uid,
+			name: player.name
+	}));
 
-function pair_avail_players() {
-
-	if (players_avail.length < 2)
-		return;
-
-
-	var p1 = players_avail.shift();
-	var p2 = players_avail.shift();
-
-	p1.mode = 'm';
-	p2.mode = 's';
-	p1.status = 'paired';
-	p2.status = 'paired';
-	p1.opp = p2;
-	p2.opp = p1;
-
-	//util.log("connect_new_players p1: "+util.inspect(p1, { showHidden: true, depth: 3, colors: true }));
-
-	// io.sockets.connected[p1.sockid].emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
-	// io.sockets.connected[p2.sockid].emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
-	io.to(p1.sockid).emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
-	io.to(p2.sockid).emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
-
-	util.log("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
-	// updAdmin("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
-
+	io.emit("available_players", availablePlayers);
 };
+// ----	--------------------------------------------	--------------------------------------------	
+
+// function pair_avail_players() {
+
+// 	if (players_avail.length < 2)
+// 		return;
+
+
+// 	var p1 = players_avail.shift();
+// 	var p2 = players_avail.shift();
+
+// 	p1.mode = 'm';
+// 	p2.mode = 's';
+// 	p1.status = 'paired';
+// 	p2.status = 'paired';
+// 	p1.opp = p2;
+// 	p2.opp = p1;
+
+// 	//util.log("connect_new_players p1: "+util.inspect(p1, { showHidden: true, depth: 3, colors: true }));
+
+// 	// io.sockets.connected[p1.sockid].emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
+// 	// io.sockets.connected[p2.sockid].emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
+// 	console.log("p1.sockid: "+p1.sockid);
+// 	console.log("p2.sockid: "+p2.sockid);
+// 	io.to(p1.sockid).emit("pair_players", {opp: {name:p2.name, uid:p2.uid}, mode:'m'});
+// 	io.to(p2.sockid).emit("pair_players", {opp: {name:p1.name, uid:p1.uid}, mode:'s'});
+
+// 	util.log("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
+// 	// updAdmin("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
+
+// };
 
 // ----	--------------------------------------------	--------------------------------------------	
 
@@ -90,6 +105,7 @@ function onClientDisconnect() {
 //		updAdmin("player disconnected - uid:"+removePlayer.uid + "  --  "+removePlayer.name);
 	}
 
+	emitAvailablePlayers();
 };
 
 // ----	--------------------------------------------	--------------------------------------------	
@@ -108,4 +124,42 @@ set_game_sock_handlers = function (socket) {
 
 	socket.on("disconnect", onClientDisconnect);
 
+	socket.on("game_request", ({ from, to , from_player_name}) => {
+		const toPlayer = players_avail.find(player => player.uid == to);
+		const fromPlayer = players_avail.find(player => player.sockid == from);
+		if (toPlayer) {
+			io.to(toPlayer.sockid).emit("game_request", { from: fromPlayer.sockid, from_player_name: fromPlayer.name });
+		}
+});
+
+    // Handle game request acceptance
+    socket.on("accept_request", ({ from, to }) => {
+			let fromPlayer = players_avail.find(player => player.sockid === from);
+			let toPlayer = players_avail.find(player => player.sockid === to);
+		console.log("accept_request", fromPlayer, toPlayer);
+		
+		if (fromPlayer && toPlayer) {
+				fromPlayer.mode = "m";
+				toPlayer.mode = "s";
+				fromPlayer.status = "paired";
+				toPlayer.status = "paired";
+				fromPlayer.opp = toPlayer;
+				toPlayer.opp = fromPlayer;
+			// 	io.to(from).emit("pair_players", { opp: toPlayer, mode: "m" });
+			// 	io.to(to).emit("pair_players", { opp: fromPlayer, mode: "s" });
+
+			console.log("fromPlayer.sockid: "+fromPlayer.sockid);
+			console.log("toPlayer.sockid: "+toPlayer.sockid);
+			io.to(fromPlayer.sockid).emit("pair_players", {opp: {name:toPlayer.name, uid:toPlayer.uid}, mode:'m'});
+			io.to(toPlayer.sockid).emit("pair_players", {opp: {name:fromPlayer.name, uid:fromPlayer.uid}, mode:'s'});
+
+			
+				// Remove both players from the available list
+				players_avail = players_avail.filter(player => player.sockid !== from && player.sockid !== to);
+		
+				io.emit("available_players", players_avail);
+
+			// 	util.log("connect_new_players - uidM:"+p1.uid + " ("+p1.name + ")  ++  uidS: "+p2.uid + " ("+p2.name+")");
+			}
+	});
 };

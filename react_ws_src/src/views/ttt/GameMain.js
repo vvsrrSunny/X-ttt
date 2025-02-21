@@ -32,6 +32,7 @@ export default class SetName extends Component {
 				next_turn_ply: true,
 				game_play: true,
 				game_stat: 'Start game'
+				
 			}
 		else {
 			this.sock_start()
@@ -40,7 +41,8 @@ export default class SetName extends Component {
 				cell_vals: {},
 				next_turn_ply: true,
 				game_play: false,
-				game_stat: 'Connecting'
+				game_stat: 'Connecting',
+				available_players: []
 			}
 		}
 	}
@@ -57,17 +59,36 @@ export default class SetName extends Component {
 
 	sock_start () {
 
-		this.socket = io(app.settings.ws_conf.loc.SOCKET__io.u);
+		// this.socket = io(app.settings.ws_conf.loc.SOCKET__io.u);
+		this.socket = io('http://0.0.0.0:3001');
 
 		this.socket.on('connect', function(data) { 
-			// console.log('socket connected', data)
+			console.log('socket connected', data)
 
 			this.socket.emit('new player', { name: app.settings.curr_user.name });
 
 		}.bind(this));
 
+		this.socket.on('available_players', function(data) { 
+			console.log('available_players', data)
+			const new_available_players= data.filter(player => app.settings.curr_user.name !== player.name);
+			this.setState({
+				available_players: new_available_players
+			})
+		}.bind(this));
+
+		this.socket.on('game_request', function({from, from_player_name}) {
+			const accept = window.confirm(`Player ${from_player_name} wants to play. Accept?`);
+			if (accept) {
+					this.socket.emit("accept_request", { from, to: this.socket.id });
+			} else {
+					this.socket.emit("reject_request", { from: fromPlayer.sockid });
+			}
+		}.bind(this));
+
+
 		this.socket.on('pair_players', function(data) { 
-			// console.log('paired with ', data)
+			console.log('paired with ', data)
 
 			this.setState({
 				next_turn_ply: data.mode=='m',
@@ -117,6 +138,19 @@ export default class SetName extends Component {
 				<div id="game_stat">
 					<div id="game_stat_msg">{this.state.game_stat}</div>
 					{this.state.game_play && <div id="game_turn_msg">{this.state.next_turn_ply ? 'Your turn' : 'Opponent turn'}</div>}
+				</div>
+
+				<div>
+						<h1>Available Players</h1>
+						<ul>
+								{this.state.available_players && this.state.available_players.map((player) => (
+									
+										<li key={player.uid}>
+												{player.name} 
+												<button onClick={() => this.sendGameRequest(player.uid)}>Challenge</button>
+										</li>
+								))}
+						</ul>
 				</div>
 
 				<div id="game_board">
@@ -218,6 +252,13 @@ export default class SetName extends Component {
 	}
 
 
+//	------------------------	------------------------	------------------------
+//	------------------------	------------------------	------------------------
+
+sendGameRequest(playerId) {
+	console.log("sendGameRequest", playerId);
+	this.socket.emit("game_request", { from: this.socket.id, to: playerId, from_player_name: app.settings.curr_user.name });
+}
 //	------------------------	------------------------	------------------------
 //	------------------------	------------------------	------------------------
 
