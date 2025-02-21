@@ -143,7 +143,6 @@ set_game_sock_handlers = function (socket) {
     socket.on("accept_request", ({ from, to }) => {
 			let fromPlayer = players_avail.find(player => player.sockid === from);
 			let toPlayer = players_avail.find(player => player.sockid === to);
-		console.log("accept_request", fromPlayer, toPlayer);
 		
 		if (fromPlayer && toPlayer) {
 				fromPlayer.mode = "m";
